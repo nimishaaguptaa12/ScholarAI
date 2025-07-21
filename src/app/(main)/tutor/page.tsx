@@ -37,11 +37,12 @@ export default function TutorPage() {
     if (input.trim() === "") return;
 
     const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput("");
     setIsLoading(true);
 
-    const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
+    const chatHistory = newMessages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
 
     try {
       const response = await aiChatTutor({ message: input, chatHistory });
