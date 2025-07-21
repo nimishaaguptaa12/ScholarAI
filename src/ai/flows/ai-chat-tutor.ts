@@ -51,13 +51,15 @@ const prompt = ai.definePrompt({
   - Answer: Mitochondria
 
   Here is the chat history:
+  {{#if chatHistory}}
   {{#each chatHistory}}
-  {{#if (eq role \"user\")}}
+  {{#if (eq role "user")}}
   User: {{content}}
   {{else}}
   Assistant: {{content}}
   {{/if}}
   {{/each}}
+  {{/if}}
 
   User: {{message}}
   Assistant: `,
