@@ -34,7 +34,7 @@ export default function LandingPage() {
         <Link href="/" className="flex items-center gap-2">
           <AppLogo className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold tracking-tight text-foreground">
-            FlashGenius
+            ScholarAI
           </span>
         </Link>
         <div className="flex items-center gap-2">
@@ -54,7 +54,7 @@ export default function LandingPage() {
               Master Any Subject with AI
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8">
-              FlashGenius transforms your study materials into interactive flashcards, using intelligent learning techniques to help you learn faster and remember longer.
+              ScholarAI transforms your study materials into interactive flashcards, using intelligent learning techniques to help you learn faster and remember longer.
             </p>
             <Button size="lg" asChild>
               <Link href="/register">Get Started for Free</Link>
@@ -90,7 +90,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} FlashGenius. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} ScholarAI. All rights reserved.</p>
       </footer>
     </div>
   );

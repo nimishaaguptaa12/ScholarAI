@@ -50,7 +50,7 @@ function MainSidebar() {
             <SidebarHeader>
                 <div className="flex items-center gap-2 p-2">
                     <AppLogo className="size-8 text-primary" />
-                    <span className="text-lg font-semibold tracking-tight">FlashGenius</span>
+                    <span className="text-lg font-semibold tracking-tight">ScholarAI</span>
                 </div>
             </SidebarHeader>
             <SidebarContent>

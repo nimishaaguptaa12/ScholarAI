@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'FlashGenius',
+  title: 'ScholarAI',
   description: 'AI-Powered Flashcards for Effortless Learning',
 };
 
