@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -37,16 +38,22 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateFlashcardsOutputSchema},
   prompt: `You are a helpful AI assistant that generates flashcards from a given document.
 
-  Given the following document, identify key concepts and generate question/answer pairs for flashcards.
-  Return the flashcards as a JSON array.
+  Your task is to analyze the provided document and create a list of question-and-answer pairs suitable for flashcards.
+  Identify the key concepts, definitions, important facts, and main ideas.
 
   {{#if documentText}}
+  The document content is provided as plain text below. Analyze it to generate flashcards.
   Document Text: {{{documentText}}}
   {{/if}}
   
   {{#if documentFile}}
+  The document is provided as a file. It may contain text, images, or a combination of both.
+  Analyze all content within the file, including text and visual elements, to generate comprehensive flashcards.
+  If there are images, create questions based on what is depicted.
   Document File: {{media url=documentFile}}
   {{/if}}
+
+  Return the flashcards as a JSON array of objects, where each object has a "question" and "answer" field.
   `,
 });
 
@@ -58,6 +65,6 @@ const generateFlashcardsFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    return output || [];
   }
 );
