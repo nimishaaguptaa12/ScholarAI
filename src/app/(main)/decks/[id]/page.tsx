@@ -85,7 +85,7 @@ export default function DeckDetailPage() {
             </Link>
           </Button>
           <Button variant="outline" asChild>
-             <Link href="/create">
+             <Link href={`/create?deckId=${id}`}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Cards
              </Link>
           </Button>
@@ -137,3 +137,5 @@ export default function DeckDetailPage() {
     </div>
   );
 }
+
+    

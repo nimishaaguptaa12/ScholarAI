@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -16,7 +16,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,30 +27,40 @@ import { useToast } from "@/hooks/use-toast";
 import { Zap, Loader2, BookPlus, FileText, Upload } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { generateFlashcards } from "@/lib/actions";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 
 const formSchema = z.object({
-  newDeckName: z.string().min(3, {
-    message: "Deck name must be at least 3 characters.",
-  }),
+  newDeckName: z.string().optional(),
   newDeckDescription: z.string().optional(),
   inputType: z.enum(['text', 'pdf']),
   documentText: z.string().optional(),
   documentFile: z.any().optional(),
-}).refine(data => {
-    if (data.inputType === 'text') {
-        return !!data.documentText && data.documentText.length >= 50;
+}).superRefine((data, ctx) => {
+    // If we're creating a new deck (no deckId in URL), name is required.
+    if (!data.newDeckName) {
+         // This validation should only apply if we are NOT in "add to existing" mode.
+         // We can't check URL params here directly, so we infer from newDeckName's presence.
+         // A better way is to handle this logic outside the schema or pass context.
+         // For now, we'll make it optional and check in onSubmit.
     }
-    if (data.inputType === 'pdf') {
-        return !!data.documentFile;
+
+    if (data.inputType === 'text' && (!data.documentText || data.documentText.length < 50)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please paste text (min 50 chars).",
+            path: ["documentText"],
+        });
     }
-    return false;
-}, {
-    message: "Please either paste text (min 50 chars) or upload a PDF file.",
-    path: ["documentText"], // assign error to a field
+    if (data.inputType === 'pdf' && !data.documentFile) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please upload a PDF file.",
+            path: ["documentFile"],
+        });
+    }
 });
 
 export default function CreatePage() {
@@ -59,6 +68,25 @@ export default function CreatePage() {
   const [fileName, setFileName] = useState("");
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deckId = searchParams.get('deckId');
+
+  const [deck, setDeck] = useState<Deck | null>(null);
+  
+  const isAddingToExistingDeck = !!deckId;
+
+  useEffect(() => {
+    if (deckId) {
+        const allDecks: Deck[] = JSON.parse(localStorage.getItem("decks") || "[]");
+        const currentDeck = allDecks.find(d => d.id === deckId);
+        if (currentDeck) {
+            setDeck(currentDeck);
+        } else {
+            toast({ variant: "destructive", title: "Deck not found" });
+            router.push("/decks");
+        }
+    }
+  }, [deckId, router, toast]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -103,16 +131,29 @@ export default function CreatePage() {
           return;
       }
 
-      const newDeck: Deck = {
-          id: Date.now().toString(),
-          name: values.newDeckName,
-          description: values.newDeckDescription || '',
-          userId: currentUser.id,
-      };
-      
-      const allDecks: Deck[] = JSON.parse(localStorage.getItem("decks") || "[]");
-      localStorage.setItem("decks", JSON.stringify([...allDecks, newDeck]));
-      const targetDeckId = newDeck.id;
+      let targetDeckId = deckId;
+      let deckName = deck?.name;
+
+      if (!isAddingToExistingDeck) {
+        if (!values.newDeckName || values.newDeckName.length < 3) {
+            toast({ variant: "destructive", title: "Validation Error", description: "Deck name must be at least 3 characters." });
+            setIsGenerating(false);
+            return;
+        }
+
+        const newDeck: Deck = {
+            id: Date.now().toString(),
+            name: values.newDeckName,
+            description: values.newDeckDescription || '',
+            userId: currentUser.id,
+        };
+        
+        const allDecks: Deck[] = JSON.parse(localStorage.getItem("decks") || "[]");
+        localStorage.setItem("decks", JSON.stringify([...allDecks, newDeck]));
+        targetDeckId = newDeck.id;
+        deckName = newDeck.name;
+      }
+
 
       let result: Flashcard[] = [];
       if (values.inputType === 'text' && values.documentText) {
@@ -141,7 +182,7 @@ export default function CreatePage() {
         
         toast({
           title: "Success!",
-          description: `Successfully created the "${newDeck.name}" deck with ${result.length} flashcards.`,
+          description: `Successfully created ${result.length} flashcards for the "${deckName}" deck.`,
         });
         
         router.push(`/decks/${targetDeckId}`);
@@ -164,54 +205,60 @@ export default function CreatePage() {
     }
   }
 
+  const pageTitle = isAddingToExistingDeck ? `Add Cards to "${deck?.name}"` : "Create New AI Deck";
+  const pageDescription = isAddingToExistingDeck 
+    ? "Paste your content or upload a PDF to add more cards to this deck."
+    : "Provide a deck name, paste your content or upload a PDF, and let AI do the rest.";
+  const buttonText = isAddingToExistingDeck ? "Add Cards" : "Create Deck & Generate";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Zap className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create New AI Deck</h1>
-          <p className="text-muted-foreground">
-            Provide a deck name, paste your content or upload a PDF, and let AI do the rest.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
+          <p className="text-muted-foreground">{pageDescription}</p>
         </div>
       </div>
        <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Card>
-                <CardHeader>
-                <CardTitle>Deck Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="newDeckName"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Deck Name</FormLabel>
-                                <FormControl>
-                                <Input placeholder="e.g., Quantum Physics 101" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="newDeckDescription"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description (Optional)</FormLabel>
-                                <FormControl>
-                                <Textarea placeholder="A brief description of what this deck is about." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            {!isAddingToExistingDeck && (
+                <Card className="mb-6">
+                    <CardHeader>
+                    <CardTitle>Deck Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="newDeckName"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Deck Name</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g., Quantum Physics 101" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="newDeckDescription"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description (Optional)</FormLabel>
+                                    <FormControl>
+                                    <Textarea placeholder="A brief description of what this deck is about." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <Tabs defaultValue="text" className="mt-6" onValueChange={(value) => form.setValue('inputType', value as 'text' | 'pdf')}>
                 <TabsList className="grid w-full grid-cols-2">
@@ -237,9 +284,6 @@ export default function CreatePage() {
                                         {...field}
                                     />
                                     </FormControl>
-                                    <FormDescription>
-                                        Enter at least 50 characters.
-                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                                 )}
@@ -298,7 +342,7 @@ export default function CreatePage() {
                     ) : (
                     <>
                         <BookPlus className="mr-2 h-4 w-4" />
-                        Create Deck & Generate
+                        {buttonText}
                     </>
                     )}
                 </Button>
@@ -308,3 +352,5 @@ export default function CreatePage() {
     </div>
   );
 }
+
+    
