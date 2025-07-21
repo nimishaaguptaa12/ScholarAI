@@ -3,21 +3,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart as BarChartIcon, Book, Target, Zap } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { type Deck, type Flashcard } from "@/lib/types";
-
-const chartData = [
-  { date: "Mon", score: 80 },
-  { date: "Tue", score: 92 },
-  { date: "Wed", score: 75 },
-  { date: "Thu", score: 88 },
-  { date: "Fri", score: 95 },
-  { date: "Sat", score: 82 },
-  { date: "Sun", score: 90 },
-];
+import { subDays, format, startOfDay, isWithinInterval } from 'date-fns';
 
 const chartConfig = {
   score: {
@@ -29,6 +20,8 @@ const chartConfig = {
 export default function DashboardPage() {
     const [stats, setStats] = useState({ totalDecks: 0, totalCards: 0, dueToday: 0 });
     const [recentDecks, setRecentDecks] = useState<Deck[]>([]);
+    const [averageScore, setAverageScore] = useState<number | null>(null);
+    const [weeklyProgress, setWeeklyProgress = useState<{date: string; score: number | null}[]>([]);
 
     useEffect(() => {
         const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
@@ -49,6 +42,50 @@ export default function DashboardPage() {
             
             setStats({ totalDecks: userDecks.length, totalCards: userCards.length, dueToday: dueCards.length });
             setRecentDecks(userDecks.slice(0, 3));
+
+            // Calculate weekly progress and average score
+            const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
+            const now = new Date();
+
+            const recentReviews = userCards
+                .flatMap(card => card.reviewHistory)
+                .filter(review => isWithinInterval(new Date(review.date), { start: sevenDaysAgo, end: now }));
+            
+            if(recentReviews.length > 0) {
+                const correctReviews = recentReviews.filter(r => r.correct).length;
+                setAverageScore(Math.round((correctReviews / recentReviews.length) * 100));
+            } else {
+                setAverageScore(null);
+            }
+
+            const dailyScores: { [key: string]: { correct: number; total: number } } = {};
+            const last7Days = Array.from({ length: 7 }).map((_, i) => startOfDay(subDays(now, i)));
+            
+            last7Days.forEach(day => {
+                const dayStr = format(day, 'yyyy-MM-dd');
+                dailyScores[dayStr] = { correct: 0, total: 0 };
+            });
+
+            recentReviews.forEach(review => {
+                const dayStr = format(startOfDay(new Date(review.date)), 'yyyy-MM-dd');
+                if(dailyScores[dayStr]) {
+                    dailyScores[dayStr].total += 1;
+                    if(review.correct) {
+                        dailyScores[dayStr].correct += 1;
+                    }
+                }
+            });
+
+            const progressData = last7Days.reverse().map(day => {
+                const dayStr = format(day, 'yyyy-MM-dd');
+                const data = dailyScores[dayStr];
+                const score = data.total > 0 ? Math.round((data.correct / data.total) * 100) : null;
+                return {
+                    date: format(day, 'E'),
+                    score: score,
+                };
+            });
+            setWeeklyProgress(progressData);
         }
     }, []);
 
@@ -91,13 +128,13 @@ export default function DashboardPage() {
             <BarChartIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">88%</div>
+            <div className="text-2xl font-bold">{averageScore !== null ? `${averageScore}%` : 'N/A'}</div>
             <p className="text-xs text-muted-foreground">Based on last 7 days</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Next Review</CardTitle>
+            <CardTitle className="text-sm font-medium">Cards to Review</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -114,14 +151,32 @@ export default function DashboardPage() {
             <CardDescription>Your quiz scores from the last 7 days.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-64 w-full">
-              <BarChart data={chartData} accessibilityLayer>
-                <ChartTooltip
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                <Bar dataKey="score" fill="var(--color-score)" radius={4} />
-              </BarChart>
-            </ChartContainer>
+             {weeklyProgress.some(d => d.score !== null) ? (
+                <ChartContainer config={chartConfig} className="h-64 w-full">
+                <BarChart data={weeklyProgress} accessibilityLayer margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      tickMargin={10}
+                      axisLine={false}
+                    />
+                    <YAxis
+                       domain={[0, 100]}
+                       tickFormatter={(value) => `${value}%`}
+                    />
+                    <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
+                    />
+                    <Bar dataKey="score" fill="var(--color-score)" radius={4} />
+                </BarChart>
+                </ChartContainer>
+             ) : (
+                <div className="h-64 flex items-center justify-center">
+                    <p className="text-muted-foreground">No study data yet. Complete a session to see your progress!</p>
+                </div>
+             )}
           </CardContent>
         </Card>
         <Card>
