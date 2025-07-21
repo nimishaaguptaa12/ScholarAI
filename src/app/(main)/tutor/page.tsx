@@ -42,7 +42,10 @@ export default function TutorPage() {
     setInput("");
     setIsLoading(true);
 
-    const chatHistory = newMessages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+    const chatHistory = newMessages.slice(0, -1).map(m => ({
+        role: m.role,
+        content: m.content
+    }));
 
     try {
       const response = await aiChatTutor({ message: input, chatHistory });
