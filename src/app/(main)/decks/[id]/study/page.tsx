@@ -199,7 +199,7 @@ export default function StudyPage() {
                 <SheetTitle>AI Tutor</SheetTitle>
               </SheetHeader>
               <TutorChat
-                className="flex-1"
+                className="flex-1 min-h-0"
                 initialFlashcard={currentCard}
               />
             </SheetContent>
