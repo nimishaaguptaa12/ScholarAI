@@ -12,7 +12,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateFlashcardsInputSchema = z.object({
-  documentText: z.string().describe('The text content of the document to generate flashcards from.'),
+  documentText: z.string().optional().describe('The text content of the document to generate flashcards from.'),
+  documentFile: z.string().optional().describe("A PDF file of the document, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:application/pdf;base64,<encoded_data>'."),
+}).refine(data => data.documentText || data.documentFile, {
+    message: "Either documentText or documentFile must be provided.",
 });
 export type GenerateFlashcardsInput = z.infer<typeof GenerateFlashcardsInputSchema>;
 
@@ -34,10 +37,17 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateFlashcardsOutputSchema},
   prompt: `You are a helpful AI assistant that generates flashcards from a given document.
 
-  Given the following document text, identify key concepts and generate question/answer pairs for flashcards.
+  Given the following document, identify key concepts and generate question/answer pairs for flashcards.
   Return the flashcards as a JSON array.
 
-  Document Text: {{{documentText}}}`,
+  {{#if documentText}}
+  Document Text: {{{documentText}}}
+  {{/if}}
+  
+  {{#if documentFile}}
+  Document File: {{media url=documentFile}}
+  {{/if}}
+  `,
 });
 
 const generateFlashcardsFlow = ai.defineFlow(
