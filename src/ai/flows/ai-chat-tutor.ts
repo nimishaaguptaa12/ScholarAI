@@ -21,6 +21,12 @@ const AIChatTutorInputSchema = z.object({
 });
 export type AIChatTutorInput = z.infer<typeof AIChatTutorInputSchema>;
 
+// We'll pass a formatted history string to the prompt now.
+const PromptInputSchema = z.object({
+  message: z.string(),
+  formattedHistory: z.string(),
+});
+
 const AIChatTutorOutputSchema = z.object({
   response: z.string().describe('The AI chat tutor response.'),
   flashcards: z.array(z.object({
@@ -36,7 +42,7 @@ export async function aiChatTutor(input: AIChatTutorInput): Promise<AIChatTutorO
 
 const prompt = ai.definePrompt({
   name: 'aiChatTutorPrompt',
-  input: {schema: AIChatTutorInputSchema},
+  input: {schema: PromptInputSchema},
   output: {schema: AIChatTutorOutputSchema},
   prompt: `You are an AI chat tutor that helps students create flashcards and test their knowledge.
 
@@ -51,15 +57,7 @@ const prompt = ai.definePrompt({
   - Answer: Mitochondria
 
   Here is the chat history:
-  {{#if chatHistory}}
-  {{#each chatHistory}}
-  {{#if (eq this.role "user")}}
-  User: {{this.content}}
-  {{else}}
-  Assistant: {{this.content}}
-  {{/if}}
-  {{/each}}
-  {{/if}}
+  {{{formattedHistory}}}
 
   User: {{message}}
   Assistant: `,
@@ -71,8 +69,16 @@ const aiChatTutorFlow = ai.defineFlow(
     inputSchema: AIChatTutorInputSchema,
     outputSchema: AIChatTutorOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async ({ message, chatHistory }) => {
+    // Format the history into a simple string before sending to the prompt
+    const formattedHistory = (chatHistory || [])
+      .map(turn => `${turn.role === 'user' ? 'User' : 'Assistant'}: ${turn.content}`)
+      .join('\n');
+
+    const {output} = await prompt({
+        message,
+        formattedHistory,
+    });
     return output!;
   }
 );
