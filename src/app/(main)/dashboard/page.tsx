@@ -21,7 +21,7 @@ export default function DashboardPage() {
     const [stats, setStats] = useState({ totalDecks: 0, totalCards: 0, dueToday: 0 });
     const [recentDecks, setRecentDecks] = useState<Deck[]>([]);
     const [averageScore, setAverageScore] = useState<number | null>(null);
-    const [weeklyProgress, setWeeklyProgress = useState<{date: string; score: number | null}[]>([]);
+    const [weeklyProgress, setWeeklyProgress] = useState<{date: string; score: number | null}[]>([]);
 
     useEffect(() => {
         const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
@@ -31,17 +31,16 @@ export default function DashboardPage() {
             const allCards: Flashcard[] = JSON.parse(localStorage.getItem("flashcards") || "[]");
             const userCards = allCards.filter(c => userDecks.some(d => d.id === c.deckId));
             
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const today = startOfDay(new Date());
 
             const dueCards = userCards.filter(card => {
                 if (!card.nextReviewDate) return true; // Review new cards immediately
-                const nextReview = new Date(card.nextReviewDate);
+                const nextReview = startOfDay(new Date(card.nextReviewDate));
                 return nextReview <= today;
             });
             
             setStats({ totalDecks: userDecks.length, totalCards: userCards.length, dueToday: dueCards.length });
-            setRecentDecks(userDecks.slice(0, 3));
+            setRecentDecks(userDecks.slice(-3).reverse());
 
             // Calculate weekly progress and average score
             const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
