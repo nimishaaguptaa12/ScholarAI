@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart as BarChartIcon, Book, Target, Zap } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart as RechartsBarChart, Bar } from "recharts";
+import { BarChart, Bar } from "recharts";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -27,7 +27,7 @@ const chartConfig = {
 };
 
 export default function DashboardPage() {
-    const [stats, setStats] = useState({ totalDecks: 0, totalCards: 0 });
+    const [stats, setStats] = useState({ totalDecks: 0, totalCards: 0, dueToday: 0 });
     const [recentDecks, setRecentDecks] = useState<Deck[]>([]);
 
     useEffect(() => {
@@ -38,7 +38,16 @@ export default function DashboardPage() {
             const allCards: Flashcard[] = JSON.parse(localStorage.getItem("flashcards") || "[]");
             const userCards = allCards.filter(c => userDecks.some(d => d.id === c.deckId));
             
-            setStats({ totalDecks: userDecks.length, totalCards: userCards.length });
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const dueCards = userCards.filter(card => {
+                if (!card.nextReviewDate) return true; // Review new cards immediately
+                const nextReview = new Date(card.nextReviewDate);
+                return nextReview <= today;
+            });
+            
+            setStats({ totalDecks: userDecks.length, totalCards: userCards.length, dueToday: dueCards.length });
             setRecentDecks(userDecks.slice(0, 3));
         }
     }, []);
@@ -92,7 +101,7 @@ export default function DashboardPage() {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12 Cards</div>
+            <div className="text-2xl font-bold">{stats.dueToday} Cards</div>
             <p className="text-xs text-muted-foreground">Due for review today</p>
           </CardContent>
         </Card>
@@ -106,12 +115,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-64 w-full">
-              <RechartsBarChart data={chartData} accessibilityLayer>
+              <BarChart data={chartData} accessibilityLayer>
                 <ChartTooltip
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                 <Bar dataKey="score" fill="var(--color-score)" radius={4} />
-              </RechartsBarChart>
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
