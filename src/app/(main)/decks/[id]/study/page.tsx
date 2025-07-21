@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Flashcard as FlashcardComponent } from "@/components/flashcard";
-import { ArrowLeft, Check, X, Trophy } from "lucide-react";
+import { ArrowLeft, Check, X, Trophy, RefreshCw } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,8 @@ export default function StudyPage() {
         const storedFlashcards: Flashcard[] = JSON.parse(localStorage.getItem("flashcards") || "[]");
         const deckCards = storedFlashcards.filter((f) => f.deckId === id);
         setAllFlashcards(storedFlashcards);
-        setStudyQueue(deckCards);
+        // Shuffle the cards for a new session
+        setStudyQueue(deckCards.sort(() => Math.random() - 0.5));
       } else {
         router.push("/decks");
       }
@@ -73,16 +75,24 @@ export default function StudyPage() {
       setTimeout(() => {
         setCurrentIndex(prev => prev + 1);
         setIsFlipped(false);
-      }, 500);
+      }, 300);
     } else {
       setIsFinished(true);
     }
   };
 
-  if (!deck || studyQueue.length === 0) {
+  if (!deck) {
+    return (
+       <div className="flex h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (studyQueue.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-2xl font-semibold">No cards to study in this deck.</h2>
+        <h2 className="text-2xl font-semibold">This deck has no cards.</h2>
         <Button onClick={() => router.push(`/decks/${id}`)} className="mt-4">Back to Deck</Button>
       </div>
     );
@@ -93,28 +103,34 @@ export default function StudyPage() {
     const score = total > 0 ? Math.round((sessionResults.correct / total) * 100) : 0;
 
     return (
-        <Card className="max-w-2xl mx-auto text-center">
+        <Card className="max-w-2xl mx-auto text-center animate-in fade-in-50">
             <CardHeader>
-                <CardTitle className="flex justify-center items-center gap-2 text-2xl">
-                    <Trophy className="h-8 w-8 text-yellow-500" />
+                <CardTitle className="flex justify-center items-center gap-2 text-3xl">
+                    <Trophy className="h-10 w-10 text-yellow-400" />
                     Session Complete!
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <p className="text-4xl font-bold">{score}%</p>
+            <CardContent className="space-y-6">
+                <p className="text-muted-foreground">You finished the "{deck.name}" deck.</p>
+                <div className="p-6 bg-secondary/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">YOUR SCORE</p>
+                    <p className="text-6xl font-bold">{score}%</p>
+                </div>
                 <div className="flex justify-around">
-                    <div>
-                        <p className="text-lg font-semibold text-green-500">{sessionResults.correct}</p>
-                        <p className="text-sm text-muted-foreground">Correct</p>
+                    <div className="text-green-600">
+                        <p className="text-2xl font-bold">{sessionResults.correct}</p>
+                        <p className="text-sm font-medium">Correct</p>
                     </div>
-                    <div>
-                        <p className="text-lg font-semibold text-red-500">{sessionResults.incorrect}</p>
-                        <p className="text-sm text-muted-foreground">Incorrect</p>
+                    <div className="text-destructive">
+                        <p className="text-2xl font-bold">{sessionResults.incorrect}</p>
+                        <p className="text-sm font-medium">Incorrect</p>
                     </div>
                 </div>
                 <div className="flex gap-4 pt-4">
+                    <Button onClick={() => window.location.reload()} variant="outline" className="flex-1">
+                        <RefreshCw className="mr-2 h-4 w-4" /> Study Again
+                    </Button>
                     <Button onClick={() => router.push(`/decks/${id}`)} className="flex-1">Back to Deck</Button>
-                    <Button onClick={() => window.location.reload()} variant="outline" className="flex-1">Study Again</Button>
                 </div>
             </CardContent>
         </Card>
@@ -123,16 +139,22 @@ export default function StudyPage() {
 
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" onClick={() => router.push(`/decks/${id}`)}>
+       <header className="mb-6 space-y-2">
+        <Button variant="ghost" onClick={() => router.push(`/decks/${id}`)} className="pl-0">
           <ArrowLeft className="mr-2 h-4 w-4" />
           End Session
         </Button>
-        <div className="text-lg font-semibold">
-          {currentIndex + 1} / {studyQueue.length}
+        <div className="flex items-center justify-between gap-4">
+             <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Studying Deck</p>
+                <h1 className="text-2xl font-bold tracking-tight">{deck?.name}</h1>
+             </div>
+             <div className="text-lg font-semibold tabular-nums">
+                {currentIndex + 1} / {studyQueue.length}
+             </div>
         </div>
-      </div>
-      <Progress value={progress} className="mb-8" />
+        <Progress value={progress} />
+      </header>
       
       <div className="flex-grow flex items-center justify-center">
         <FlashcardComponent
@@ -143,15 +165,15 @@ export default function StudyPage() {
         />
       </div>
 
-      <div className="mt-8 flex justify-around items-center transition-opacity duration-300" style={{ opacity: isFlipped ? 1 : 0.2, pointerEvents: isFlipped ? 'auto' : 'none' }}>
-        <Button variant="destructive" size="lg" className="rounded-full h-20 w-20 flex flex-col gap-1" onClick={() => handleReview(false)}>
+      <div className="mt-8 flex justify-around items-center">
+        <Button variant="destructive" size="lg" className="rounded-full h-20 w-20 flex flex-col gap-1 shadow-lg transition-opacity duration-300 disabled:opacity-30 disabled:cursor-not-allowed" onClick={() => handleReview(false)} disabled={!isFlipped}>
             <X className="h-8 w-8" />
-            <span>Didn't know</span>
+            <span className="text-xs">Didn't know</span>
         </Button>
-        <Button variant="ghost" className="text-muted-foreground" onClick={() => setIsFlipped(false)}>Flip back</Button>
-        <Button variant="default" size="lg" className="rounded-full h-20 w-20 bg-green-500 hover:bg-green-600 flex flex-col gap-1" onClick={() => handleReview(true)}>
+        <Button variant="ghost" className="text-muted-foreground transition-opacity" onClick={() => setIsFlipped(!isFlipped)} disabled={isFlipped}>Flip Card</Button>
+        <Button size="lg" className="rounded-full h-20 w-20 bg-green-500 hover:bg-green-600 flex flex-col gap-1 shadow-lg transition-opacity duration-300 disabled:opacity-30 disabled:cursor-not-allowed" onClick={() => handleReview(true)} disabled={!isFlipped}>
             <Check className="h-8 w-8" />
-            <span>Knew it</span>
+            <span className="text-xs">Knew it</span>
         </Button>
       </div>
     </div>
