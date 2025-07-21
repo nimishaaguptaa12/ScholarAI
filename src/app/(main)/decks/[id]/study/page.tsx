@@ -1,15 +1,18 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Flashcard as FlashcardComponent } from "@/components/flashcard";
-import { ArrowLeft, Check, X, Trophy, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, X, Trophy, RefreshCw, MessageCircle } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { scheduleFlashcardReview } from "@/lib/actions";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { TutorChat } from "@/components/tutor-chat";
+
 
 export default function StudyPage() {
   const params = useParams();
@@ -23,6 +26,7 @@ export default function StudyPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionResults, setSessionResults] = useState<{ correct: number; incorrect: number }>({ correct: 0, incorrect: 0 });
   const [isFinished, setIsFinished] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -45,7 +49,7 @@ export default function StudyPage() {
   const currentCard = useMemo(() => studyQueue[currentIndex], [studyQueue, currentIndex]);
   const progress = useMemo(() => (currentIndex / studyQueue.length) * 100, [currentIndex, studyQueue]);
 
-  const handleReview = async (correct: boolean) => {
+  const handleReview = useCallback(async (correct: boolean) => {
     if (!isFlipped) return; // Can only review after flipping
 
     setSessionResults(prev => ({
@@ -60,12 +64,19 @@ export default function StudyPage() {
         reviewHistory: [...(currentCard.reviewHistory || []), { date: new Date().toISOString(), correct }],
     };
     
-    const { nextReviewDate } = await scheduleFlashcardReview({
-        flashcardId: currentCard.id,
-        reviewHistory: updatedCard.reviewHistory,
-        difficulty: currentCard.difficulty,
-    });
-    updatedCard.nextReviewDate = nextReviewDate;
+    // Check if currentCard is defined before scheduling review
+    if (currentCard) {
+        try {
+            const { nextReviewDate } = await scheduleFlashcardReview({
+                flashcardId: currentCard.id,
+                reviewHistory: updatedCard.reviewHistory,
+                difficulty: currentCard.difficulty,
+            });
+            updatedCard.nextReviewDate = nextReviewDate;
+        } catch (error) {
+            console.error("Failed to schedule flashcard review", error);
+        }
+    }
     
     const updatedAllCards = allFlashcards.map(c => c.id === currentCard.id ? updatedCard : c);
     localStorage.setItem("flashcards", JSON.stringify(updatedAllCards));
@@ -79,12 +90,21 @@ export default function StudyPage() {
     } else {
       setIsFinished(true);
     }
-  };
+  }, [isFlipped, currentCard, allFlashcards, currentIndex, studyQueue.length]);
+
 
   if (!deck) {
     return (
        <div className="flex h-64 items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (studyQueue.length === 0 && !deck) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <h2 className="text-2xl font-semibold">Loading study session...</h2>
       </div>
     );
   }
@@ -163,6 +183,28 @@ export default function StudyPage() {
             isFlipped={isFlipped}
             onFlip={() => setIsFlipped(!isFlipped)}
         />
+      </div>
+
+       <div className="mt-4 -mb-2 flex justify-center">
+        {isFlipped && (
+          <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="rounded-full">
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Chat to learn more
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+              <SheetHeader className="p-6 pb-2">
+                <SheetTitle>AI Tutor</SheetTitle>
+              </SheetHeader>
+              <TutorChat
+                className="flex-1"
+                initialFlashcard={currentCard}
+              />
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
 
       <div className="mt-8 flex justify-around items-center">

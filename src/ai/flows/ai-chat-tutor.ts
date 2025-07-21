@@ -1,4 +1,4 @@
-// src/ai/flows/ai-chat-tutor.ts
+
 'use server';
 
 /**
@@ -18,13 +18,20 @@ const AIChatTutorInputSchema = z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string(),
   })).optional().describe('The chat history between the user and the AI.'),
+  flashcardContext: z.object({
+    question: z.string(),
+    answer: z.string(),
+  }).optional().describe('The context of the flashcard the user is currently studying.'),
 });
 export type AIChatTutorInput = z.infer<typeof AIChatTutorInputSchema>;
 
-// We'll pass a formatted history string to the prompt now.
 const PromptInputSchema = z.object({
   message: z.string(),
   formattedHistory: z.string(),
+  flashcardContext: z.object({
+    question: z.string(),
+    answer: z.string(),
+  }).optional(),
 });
 
 const AIChatTutorOutputSchema = z.object({
@@ -50,7 +57,13 @@ const prompt = ai.definePrompt({
   You should engage the student in a conversation, ask questions, and provide feedback.
   If the student asks you to generate flashcards, you should generate a list of flashcards based on the conversation, or uploaded material.
 
-  Here are some example flashcards:
+  {{#if flashcardContext}}
+  The user is currently studying the following flashcard. Use this as the primary context for the conversation.
+  - Question: {{flashcardContext.question}}
+  - Answer: {{flashcardContext.answer}}
+  {{/if}}
+
+  Here are some example flashcards you can create if asked:
   - Question: What is the capital of France?
   - Answer: Paris
   - Question: What is the powerhouse of the cell?
@@ -69,7 +82,7 @@ const aiChatTutorFlow = ai.defineFlow(
     inputSchema: AIChatTutorInputSchema,
     outputSchema: AIChatTutorOutputSchema,
   },
-  async ({ message, chatHistory }) => {
+  async ({ message, chatHistory, flashcardContext }) => {
     // Format the history into a simple string before sending to the prompt
     const formattedHistory = (chatHistory || [])
       .map(turn => `${turn.role === 'user' ? 'User' : 'Assistant'}: ${turn.content}`)
@@ -78,6 +91,7 @@ const aiChatTutorFlow = ai.defineFlow(
     const {output} = await prompt({
         message,
         formattedHistory,
+        flashcardContext,
     });
     return output!;
   }
