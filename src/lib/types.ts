@@ -12,6 +12,7 @@ export interface Flashcard {
   nextReviewDate: string | null;
   difficulty: number; // 0-1 scale
   reviewHistory: { date: string; correct: boolean }[];
+  isImportant?: boolean;
 }
 
 export interface Deck {

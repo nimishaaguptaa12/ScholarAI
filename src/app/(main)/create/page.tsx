@@ -16,6 +16,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -155,7 +156,7 @@ export default function CreatePage() {
       }
 
 
-      let result: Flashcard[] = [];
+      let result: Omit<Flashcard, 'id' | 'deckId' | 'lastReviewed' | 'nextReviewDate' | 'difficulty' | 'reviewHistory'>[] = [];
       if (values.inputType === 'text' && values.documentText) {
           result = await generateFlashcards({ documentText: values.documentText });
       } else if (values.inputType === 'pdf' && values.documentFile) {
@@ -177,6 +178,7 @@ export default function CreatePage() {
             nextReviewDate: null,
             difficulty: 0.5,
             reviewHistory: [],
+            isImportant: false,
         }));
         localStorage.setItem("flashcards", JSON.stringify([...allFlashcards, ...newFlashcards]));
         
@@ -352,5 +354,3 @@ export default function CreatePage() {
     </div>
   );
 }
-
-    

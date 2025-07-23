@@ -5,13 +5,14 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Flashcard as FlashcardComponent } from "@/components/flashcard";
-import { ArrowLeft, Check, X, Trophy, RefreshCw, MessageCircle } from "lucide-react";
+import { ArrowLeft, Check, X, Trophy, RefreshCw, MessageCircle, Star } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { scheduleFlashcardReview } from "@/lib/actions";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TutorChat } from "@/components/tutor-chat";
+import { cn } from "@/lib/utils";
 
 
 export default function StudyPage() {
@@ -48,6 +49,24 @@ export default function StudyPage() {
 
   const currentCard = useMemo(() => studyQueue[currentIndex], [studyQueue, currentIndex]);
   const progress = useMemo(() => (currentIndex / studyQueue.length) * 100, [currentIndex, studyQueue]);
+
+  const handleToggleImportant = useCallback(() => {
+    if (!currentCard) return;
+
+    const updatedCard: Flashcard = {
+      ...currentCard,
+      isImportant: !currentCard.isImportant,
+    };
+    
+    // Update the card in the study queue
+    const updatedQueue = studyQueue.map(card => card.id === currentCard.id ? updatedCard : card);
+    setStudyQueue(updatedQueue);
+
+    // Update the card in the master list and save to localStorage
+    const updatedAllCards = allFlashcards.map(c => c.id === currentCard.id ? updatedCard : c);
+    localStorage.setItem("flashcards", JSON.stringify(updatedAllCards));
+    setAllFlashcards(updatedAllCards);
+  }, [currentCard, studyQueue, allFlashcards]);
 
   const handleReview = useCallback(async (correct: boolean) => {
     if (!isFlipped) return; // Can only review after flipping
@@ -182,6 +201,8 @@ export default function StudyPage() {
             answer={currentCard.answer}
             isFlipped={isFlipped}
             onFlip={() => setIsFlipped(!isFlipped)}
+            isImportant={currentCard.isImportant}
+            onToggleImportant={handleToggleImportant}
         />
       </div>
 

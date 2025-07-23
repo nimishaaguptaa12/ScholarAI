@@ -19,9 +19,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookOpen, Edit, PlusCircle, Trash2, ArrowLeft } from "lucide-react";
+import { BookOpen, Edit, PlusCircle, Trash2, ArrowLeft, Star } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function DeckDetailPage() {
   const params = useParams();
@@ -111,7 +112,12 @@ export default function DeckDetailPage() {
               {flashcards.length > 0 ? (
                 flashcards.map((card) => (
                   <TableRow key={card.id}>
-                    <TableCell className="font-medium">{card.question}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                         {card.isImportant && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />}
+                        <span>{card.question}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{card.answer}</TableCell>
                     <TableCell className="text-right">
                        <Button variant="ghost" size="icon" className="mr-2 h-8 w-8" disabled>
@@ -137,5 +143,3 @@ export default function DeckDetailPage() {
     </div>
   );
 }
-
-    
