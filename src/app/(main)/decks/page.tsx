@@ -10,7 +10,7 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import { PlusCircle, BookOpen, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, BookOpen, MoreVertical, Edit, Trash2, Share2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import type { Deck } from "@/lib/types";
+import type { Deck, Flashcard } from "@/lib/types";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -127,6 +127,25 @@ export default function DecksPage() {
     toast({ title: "Deck Deleted", description: "The deck and all its cards have been removed." });
   };
 
+  const handleShare = (deck: Deck) => {
+    const allFlashcards: Flashcard[] = JSON.parse(localStorage.getItem("flashcards") || "[]");
+    const deckFlashcards = allFlashcards.filter(c => c.deckId === deck.id);
+
+    if (deckFlashcards.length === 0) {
+        toast({ variant: "destructive", title: "Nothing to share.", description: "This deck has no cards." });
+        return;
+    }
+
+    const shareText = `Flashcards for "${deck.name}":\n\n${deckFlashcards.map((card, index) => `${index + 1}. Q: ${card.question}\n   A: ${card.answer}`).join("\n\n")}`;
+    
+    navigator.clipboard.writeText(shareText).then(() => {
+        toast({ title: "Copied to clipboard!", description: "Deck content has been copied." });
+    }).catch(err => {
+        toast({ variant: "destructive", title: "Failed to copy", description: "Could not copy deck to clipboard."});
+        console.error("Failed to copy text: ", err);
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -152,6 +171,9 @@ export default function DecksPage() {
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem disabled>
                                 <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleShare(deck)}>
+                                <Share2 className="mr-2 h-4 w-4" /> Share
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => deleteDeck(deck.id)} className="text-destructive focus:text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
