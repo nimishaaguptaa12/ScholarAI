@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BookOpen, Edit, PlusCircle, Trash2, ArrowLeft, Star } from "lucide-react";
+import { BookOpen, Edit, PlusCircle, Trash2, ArrowLeft, Star, Share2 } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,22 @@ export default function DeckDetailPage() {
     toast({ title: "Flashcard deleted" });
   };
 
+  const handleShare = () => {
+    if (!deck || flashcards.length === 0) {
+        toast({ variant: "destructive", title: "Nothing to share." });
+        return;
+    }
+
+    const shareText = `Flashcards for "${deck.name}":\n\n${flashcards.map((card, index) => `${index + 1}. Q: ${card.question}\n   A: ${card.answer}`).join("\n\n")}`;
+    
+    navigator.clipboard.writeText(shareText).then(() => {
+        toast({ title: "Copied to clipboard!", description: "Deck content has been copied." });
+    }).catch(err => {
+        toast({ variant: "destructive", title: "Failed to copy", description: "Could not copy deck to clipboard."});
+        console.error("Failed to copy text: ", err);
+    });
+  };
+
   if (!deck) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -90,6 +106,9 @@ export default function DeckDetailPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add Cards
              </Link>
           </Button>
+           <Button variant="outline" onClick={handleShare}>
+              <Share2 className="mr-2 h-4 w-4" /> Share
+           </Button>
         </div>
       </div>
       <Card>
