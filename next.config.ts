@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Hide the floating Next.js development indicator ("N" bubble)
+  devIndicators: {
+    buildActivity: false,
+  },
 };
 
 export default nextConfig;
