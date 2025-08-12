@@ -3,12 +3,11 @@
 import { generateFlashcards as genFlashcards, type GenerateFlashcardsInput, type GenerateFlashcardsOutput, scheduleFlashcardReview as scheduleReview, type ScheduleFlashcardReviewInput, type ScheduleFlashcardReviewOutput, aiChatTutor as chatTutor, type AIChatTutorInput, type AIChatTutorOutput } from "@/ai/flows";
 
 export async function generateFlashcards(input: GenerateFlashcardsInput): Promise<GenerateFlashcardsOutput> {
-  // In a real app, you might add user authentication checks here
   try {
-    return await genFlashcards(input);
+    const result = await genFlashcards(input);
+    return Array.isArray(result) ? result : [];
   } catch (error) {
-    console.error("Error generating flashcards:", error);
-    // Return an empty array or throw a more specific error
+    console.error("Error generating flashcards:", error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -17,8 +16,7 @@ export async function scheduleFlashcardReview(input: ScheduleFlashcardReviewInpu
   try {
     return await scheduleReview(input);
   } catch (error) {
-    console.error("Error scheduling review:", error);
-    // Return a default next-day review or throw
+    console.error("Error scheduling review:", error instanceof Error ? error.message : String(error));
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return { nextReviewDate: tomorrow.toISOString().split("T")[0] };
@@ -29,7 +27,7 @@ export async function aiChatTutor(input: AIChatTutorInput): Promise<AIChatTutorO
   try {
     return await chatTutor(input);
   } catch (error) {
-    console.error("Error with AI Tutor:", error);
+    console.error("Error with AI Tutor:", error instanceof Error ? error.message : String(error));
     return { response: "I'm sorry, I encountered an error. Please try again." };
   }
 }
