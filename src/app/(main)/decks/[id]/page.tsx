@@ -11,14 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { BookOpen, Edit, PlusCircle, Trash2, ArrowLeft, Star, Share2 } from "lucide-react";
 import type { Deck, Flashcard } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -119,44 +111,53 @@ export default function DeckDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40%]">Question</TableHead>
-                <TableHead className="w-[40%]">Answer</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {flashcards.length > 0 ? (
-                flashcards.map((card) => (
-                  <TableRow key={card.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                         {card.isImportant && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />}
-                        <span>{card.question}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{card.answer}</TableCell>
-                    <TableCell className="text-right">
-                       <Button variant="ghost" size="icon" className="mr-2 h-8 w-8" disabled>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="w-[40%] py-2">Question</th>
+                  <th className="w-[40%] py-2">Answer</th>
+                  <th className="text-right py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flashcards.length > 0 ? (
+                  flashcards.map((card) => (
+                    <tr key={card.id} className="border-b last:border-b-0">
+                      <td className="py-2 font-medium">
+                        <div className="flex items-center gap-2">
+                          {card.isImportant && (
+                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                          )}
+                          <span>{card.question}</span>
+                        </div>
+                      </td>
+                      <td className="py-2">{card.answer}</td>
+                      <td className="py-2 text-right">
+                        <Button variant="ghost" size="icon" className="mr-2 h-8 w-8" disabled>
                           <Edit className="h-4 w-4" />
-                       </Button>
-                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteFlashcard(card.id)}>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => deleteFlashcard(card.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
-                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
-                    No flashcards in this deck yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="h-24 text-center">
+                      No flashcards in this deck yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

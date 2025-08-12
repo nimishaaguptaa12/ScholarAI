@@ -1,8 +1,6 @@
 "use server";
 
-import { generateFlashcards as genFlashcards, type GenerateFlashcardsInput, type GenerateFlashcardsOutput } from "@/ai/flows/generate-flashcards";
-import { scheduleFlashcardReview as scheduleReview, type ScheduleFlashcardReviewInput, type ScheduleFlashcardReviewOutput } from "@/ai/flows/spaced-repetition-scheduling";
-import { aiChatTutor as chatTutor, type AIChatTutorInput, type AIChatTutorOutput } from "@/ai/flows/ai-chat-tutor";
+import { generateFlashcards as genFlashcards, type GenerateFlashcardsInput, type GenerateFlashcardsOutput, scheduleFlashcardReview as scheduleReview, type ScheduleFlashcardReviewInput, type ScheduleFlashcardReviewOutput, aiChatTutor as chatTutor, type AIChatTutorInput, type AIChatTutorOutput } from "@/ai/flows";
 
 export async function generateFlashcards(input: GenerateFlashcardsInput): Promise<GenerateFlashcardsOutput> {
   // In a real app, you might add user authentication checks here
